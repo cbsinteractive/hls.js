@@ -370,7 +370,7 @@ class BufferController extends EventHandler {
     this.doFlush();
   }
 
-  clearLiveBackBuffer (targetDuration) {
+  flushLiveBackBuffer (targetDuration) {
     // clear back buffer for live only
     if (!this._live) {
       return;
@@ -411,7 +411,7 @@ class BufferController extends EventHandler {
     if (details.fragments.length > 0) {
       this._levelDuration = details.totalduration + details.fragments[0].start;
       this._live = details.live;
-      this.clearLiveBackBuffer(details.averagetargetduration || details.targetduration || 10);
+      this.flushLiveBackBuffer(details.averagetargetduration || details.targetduration || 10);
       this.updateMediaElementDuration();
     }
   }

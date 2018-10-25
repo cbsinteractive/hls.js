@@ -39,6 +39,7 @@ class BufferController extends EventHandler {
     this.onsbe = this.onSBUpdateError.bind(this);
     this.pendingTracks = {};
     this.tracks = {};
+    this.flushRange = [];
   }
 
   destroy () {
@@ -375,39 +376,34 @@ class BufferController extends EventHandler {
       return;
     }
 
-    const { liveBackBufferLength } = this.hls.config;
-
-    if (isFinite(liveBackBufferLength) === false || liveBackBufferLength < 0) {
+    const liveBackBufferLength = this.hls.config.liveBackBufferLength;
+    if (!isFinite(liveBackBufferLength) || liveBackBufferLength < 0) {
       return;
     }
 
-    try {
-      const currentTime = this.media.currentTime;
-      const sourceBuffer = this.sourceBuffer;
-      const bufferTypes = Object.keys(sourceBuffer);
-      const targetBackBufferPosition = currentTime - Math.max(liveBackBufferLength, targetDuration);
+    const currentTime = this.media.currentTime;
+    const sourceBuffer = this.sourceBuffer;
+    const bufferTypes = Object.keys(sourceBuffer);
+    const targetBackBufferPosition = currentTime - Math.max(liveBackBufferLength, targetDuration);
 
-      for (let index = bufferTypes.length - 1; index >= 0; index--) {
-        const bufferType = bufferTypes[index], buffered = sourceBuffer[bufferType].buffered;
+    for (let index = bufferTypes.length - 1; index >= 0; index--) {
+      const bufferType = bufferTypes[index], buffered = sourceBuffer[bufferType].buffered;
 
-        // when target buffer start exceeds actual buffer start
-        if (buffered.length > 0 && targetBackBufferPosition > buffered.start(0)) {
-          // remove buffer up until current time minus minimum back buffer length (removing buffer too close to current
-          // time will lead to playback freezing)
-          // credits for level target duration - https://github.com/videojs/http-streaming/blob/3132933b6aa99ddefab29c10447624efd6fd6e52/src/segment-loader.js#L91
-          this.flushRange.push({
-            start: 0,
-            end: targetBackBufferPosition,
-            type: bufferType
-          });
-        }
-        if (this.flushRange.length) {
-          this.flushBufferCounter = 0;
-          this.doFlush();
-        }
+      // when target buffer start exceeds actual buffer start
+      if (buffered.length > 0 && targetBackBufferPosition > buffered.start(0)) {
+        // remove buffer up until current time minus minimum back buffer length (removing buffer too close to current
+        // time will lead to playback freezing)
+        // credits for level target duration - https://github.com/videojs/http-streaming/blob/3132933b6aa99ddefab29c10447624efd6fd6e52/src/segment-loader.js#L91
+        this.flushRange.push({
+          start: 0,
+          end: targetBackBufferPosition,
+          type: bufferType
+        });
       }
-    } catch (error) {
-      logger.warn('clearLiveBackBuffer failed', error);
+      if (this.flushRange.length) {
+        this.flushBufferCounter = 0;
+        this.doFlush();
+      }
     }
   }
 
@@ -415,7 +411,7 @@ class BufferController extends EventHandler {
     if (details.fragments.length > 0) {
       this._levelDuration = details.totalduration + details.fragments[0].start;
       this._live = details.live;
-      this.clearLiveBackBuffer(details.averagetargetduration || details.targetDuration || 10);
+      this.clearLiveBackBuffer(details.averagetargetduration || details.targetduration || 10);
       this.updateMediaElementDuration();
     }
   }

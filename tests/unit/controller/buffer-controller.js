@@ -35,7 +35,9 @@ describe('BufferController tests', function () {
       bufferController.sourceBuffer = mockSourceBuffer = {
         video: {
           buffered: {
-            start() { return bufStart },
+            start () {
+              return bufStart;
+            },
             length: 1
           }
         }
@@ -46,7 +48,7 @@ describe('BufferController tests', function () {
 
     it('should flush on LEVEL_UPDATED', function () {
       const details = {
-        fragments: [{ start: 0}],
+        fragments: [{ start: 0 }],
         totalduration: 6,
         averagetargetduration: 2.8,
         targetduration: 3

@@ -1,49 +1,49 @@
-import TaskLoop from '../task-loop';
-import { FragmentState } from './fragment-tracker';
-import { Bufferable, BufferHelper } from '../utils/buffer-helper';
-import { logger } from '../utils/logger';
-import { Events } from '../events';
-import { ErrorDetails } from '../errors';
-import { ChunkMetadata } from '../types/transmuxer';
-import { appendUint8Array } from '../utils/mp4-tools';
-import { alignStream } from '../utils/discontinuities';
-import {
-  findFragmentByPDT,
-  findFragmentByPTS,
-  findFragWithCC,
-} from './fragment-finders';
-import {
-  getFragmentWithSN,
-  getPartWith,
-  updateFragPTSDTS,
-} from './level-helper';
+import type { HlsConfig } from '../config';
+import Decrypter from '../crypt/decrypter';
 import TransmuxerInterface from '../demux/transmuxer-interface';
+import { ErrorDetails } from '../errors';
+import type { HlsEventEmitter } from '../events';
+import { Events } from '../events';
+import type Hls from '../hls';
 import { Fragment, Part } from '../loader/fragment';
 import FragmentLoader, {
   FragmentLoadProgressCallback,
   LoadError,
 } from '../loader/fragment-loader';
 import { LevelDetails } from '../loader/level-details';
+import TaskLoop from '../task-loop';
+import type { SourceBufferName } from '../types/buffer';
+import type { NetworkComponentAPI } from '../types/component-api';
 import {
   BufferAppendingData,
+  BufferFlushingData,
   ErrorData,
   FragLoadedData,
-  PartsLoadedData,
   KeyLoadedData,
   MediaAttachingData,
-  BufferFlushingData,
+  PartsLoadedData,
 } from '../types/events';
-import Decrypter from '../crypt/decrypter';
-import TimeRanges from '../utils/time-ranges';
-import { PlaylistLevelType } from '../types/loader';
-import type { FragmentTracker } from './fragment-tracker';
 import type { Level } from '../types/level';
+import { PlaylistLevelType } from '../types/loader';
 import type { RemuxedTrack } from '../types/remuxer';
-import type Hls from '../hls';
-import type { HlsConfig } from '../config';
-import type { HlsEventEmitter } from '../events';
-import type { NetworkComponentAPI } from '../types/component-api';
-import type { SourceBufferName } from '../types/buffer';
+import { ChunkMetadata } from '../types/transmuxer';
+import { Bufferable, BufferHelper } from '../utils/buffer-helper';
+import { alignStream } from '../utils/discontinuities';
+import { logger } from '../utils/logger';
+import { appendUint8Array } from '../utils/mp4-tools';
+import TimeRanges from '../utils/time-ranges';
+import {
+  findFragmentByPDT,
+  findFragmentByPTS,
+  findFragWithCC,
+} from './fragment-finders';
+import type { FragmentTracker } from './fragment-tracker';
+import { FragmentState } from './fragment-tracker';
+import {
+  getFragmentWithSN,
+  getPartWith,
+  updateFragPTSDTS,
+} from './level-helper';
 
 type ResolveFragLoaded = (FragLoadedEndData) => void;
 type RejectFragLoaded = (LoadError) => void;
@@ -377,6 +377,9 @@ export default class BaseStreamController
         this._handleFragmentLoadComplete(data);
       })
       .catch((reason) => {
+        if (this.state === State.STOPPED) {
+          return;
+        }
         this.warn(reason);
         this.resetFragmentLoading(frag);
       });
@@ -1140,6 +1143,7 @@ export default class BaseStreamController
     return (
       details.live &&
       details.canBlockReload &&
+      details.partTarget &&
       details.tuneInGoal >
         Math.max(details.partHoldBack, details.partTarget * advancePartLimit)
     );
@@ -1329,9 +1333,8 @@ export default class BaseStreamController
             // The new transmuxer will be configured with a time offset matching the next fragment start,
             // preventing the timeline from shifting.
             this.warn(
-              `Could not parse fragment ${frag.sn} ${type} duration reliably (${parsedDuration}) resetting transmuxer to fallback to playlist timing`
+              `Could not parse fragment ${frag.sn} ${type} duration reliably (${parsedDuration})`
             );
-            this.resetTransmuxer();
             return result || false;
           }
           const drift = partial
@@ -1359,12 +1362,14 @@ export default class BaseStreamController
       },
       false
     );
-    if (parsed) {
-      this.state = State.PARSED;
-      this.hls.trigger(Events.FRAG_PARSED, { frag, part });
-    } else {
-      this.resetLoadingState();
+    if (!parsed) {
+      this.warn(
+        `Found no media in fragment ${frag.sn} of level ${level.id} resetting transmuxer to fallback to playlist timing`
+      );
+      this.resetTransmuxer();
     }
+    this.state = State.PARSED;
+    this.hls.trigger(Events.FRAG_PARSED, { frag, part });
   }
 
   protected resetTransmuxer() {

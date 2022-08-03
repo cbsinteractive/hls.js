@@ -1,5 +1,4 @@
 import { Events } from '../events';
-import { logger } from '../utils/logger';
 import { BufferHelper } from '../utils/buffer-helper';
 import { findFragmentByPTS } from './fragment-finders';
 import { alignMediaPlaylistByPDT } from '../utils/discontinuities';
@@ -173,6 +172,26 @@ export class SubtitleStreamController
         PlaylistLevelType.SUBTITLE
       );
     }
+  }
+
+  onMediaSeeking() {
+    // Find the currently showing subtitle track
+    const tracks = Array.from<TextTrack>(this.media.textTracks);
+    const track = tracks.find(track => track.mode != 'disabled' && (track.kind == 'subtitles' || track.kind == 'captions'));
+
+    // Manually reset the cues and fragments
+    if (track && track.cues) {
+      // Clear all text track cues
+      Array.from(track.cues).forEach(cue => track.removeCue(cue));
+
+      // Clear all loaded subtitle fragments
+      this.fragmentTracker.removeFragmentsInRange(0, this.media.duration, PlaylistLevelType.SUBTITLE);
+
+      // Clear internal buffered lists
+      this.tracksBuffered.forEach((_, index, tracks) => tracks[index] = []);
+    }
+
+    this.fragPrevious = null;
   }
 
   // If something goes wrong, proceed to next frag, if we were processing one.

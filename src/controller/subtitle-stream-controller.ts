@@ -12,7 +12,6 @@ import type { NetworkComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
 import type { LevelDetails } from '../loader/level-details';
 import type { Fragment } from '../loader/fragment';
-
 import type {
   ErrorData,
   FragLoadedData,

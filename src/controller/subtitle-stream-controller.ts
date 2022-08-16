@@ -189,6 +189,13 @@ export class SubtitleStreamController
 
       // Clear internal buffered lists
       this.tracksBuffered.forEach((_, index, tracks) => tracks[index] = []);
+
+      if (track.mode === 'showing') { 
+        track.mode = 'hidden';
+        setTimeout(() => {
+            track.mode = 'showing';
+        }, 10);
+      }
     }
 
     this.fragPrevious = null;

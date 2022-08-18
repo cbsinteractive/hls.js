@@ -178,6 +178,10 @@ export class SubtitleStreamController
   // display in VOD up to the point where they were enabled mid-stream. 
   // https://github.com/cbsinteractive/avia-player-support/issues/246
   onMediaSeeking() {
+    // Only applies to Xbox platform
+    if (/Xbox; Xbox One/.test(navigator.userAgent)) {
+      return;
+    }
 
     // Find the currently showing subtitle track
     const tracks = Array.from<TextTrack>(this.media.textTracks);
@@ -194,17 +198,15 @@ export class SubtitleStreamController
       // Clear internal buffered lists
       this.tracksBuffered.forEach((_, index, tracks) => tracks[index] = []);
 
-      // This is for Xbox only to address persistent cue issue for Pluto.
-      // Without it, last timed text cue before the seek is called remains 
+      // This is to address persistent cue issue for Pluto. Without it,
+      // the very last timed text cue before the seek is called remains 
       // on the screen even after seek is completed. See ticket below: 
       // https://github.com/cbsinteractive/avia-player-support/issues/258
-      if (/Xbox; Xbox One/.test(navigator.userAgent)) {
-        if (track.mode === 'showing') { 
-          track.mode = 'hidden';
-          self.setTimeout(() => {
-              track.mode = 'showing';
-          }, 10);
-        }
+      if (track.mode === 'showing') { 
+        track.mode = 'hidden';
+        self.setTimeout(() => {
+            track.mode = 'showing';
+        }, 10);
       }
     }
 

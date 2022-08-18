@@ -201,7 +201,7 @@ export class SubtitleStreamController
       if (/Xbox; Xbox One/.test(navigator.userAgent)) {
         if (track.mode === 'showing') { 
           track.mode = 'hidden';
-          setTimeout(() => {
+          self.setTimeout(() => {
               track.mode = 'showing';
           }, 10);
         }

@@ -179,7 +179,7 @@ export class SubtitleStreamController
   // https://github.com/cbsinteractive/avia-player-support/issues/246
   onMediaSeeking() {
     // Only applies to Xbox platform
-    if (/Xbox; Xbox One/.test(navigator.userAgent)) {
+    if (!/Xbox; Xbox One/.test(navigator.userAgent)) {
       return;
     }
 

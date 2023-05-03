@@ -1,6 +1,7 @@
 import {
   Cmcd,
   CmcdObjectType,
+  CmcdStreamType,
   CmcdStreamingFormat,
   appendCmcdHeaders,
   appendCmcdQuery
@@ -39,6 +40,7 @@ export default class CMCDController implements ComponentAPI {
   private useHeaders: boolean = false;
   private initialized: boolean = false;
   private starved: boolean = false;
+  private streamType?: CmcdStreamType;
   private buffering: boolean = true;
   private audioBuffer?: SourceBuffer; // eslint-disable-line no-restricted-globals
   private videoBuffer?: SourceBuffer; // eslint-disable-line no-restricted-globals
@@ -178,10 +180,15 @@ export default class CMCDController implements ComponentAPI {
    * Apply CMCD data to a manifest request.
    */
   private applyPlaylistData = (context: PlaylistLoaderContext) => {
+    if (context.levelDetails) {
+      this.streamType = context.levelDetails.live ? CmcdStreamType.LIVE : CmcdStreamType.VOD;
+    }
+
     try {
       this.apply(context, {
         ot: CmcdObjectType.MANIFEST,
         su: !this.initialized,
+        st: this.streamType,
       });
     } catch (error) {
       logger.warn('Could not generate manifest CMCD data.', error);
@@ -199,6 +206,7 @@ export default class CMCDController implements ComponentAPI {
       const data: Cmcd = {
         d: fragment.duration * 1000,
         ot,
+        st: this.streamType,
       };
 
       if (

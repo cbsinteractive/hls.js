@@ -1,11 +1,10 @@
-import {
-  Cmcd,
-  CmcdObjectType,
-  CmcdStreamType,
-  CmcdStreamingFormat,
-  appendCmcdHeaders,
-  appendCmcdQuery
-} from '@svta.org/common-media-library';
+import { Cmcd } from '@svta.org/common-media-library/cmcd/Cmcd';
+import { CmcdObjectType, } from '@svta.org/common-media-library/cmcd/CmcdObjectType';
+import { CmcdStreamType } from '@svta.org/common-media-library/cmcd/CmcdStreamType';
+import { CmcdStreamingFormat } from '@svta.org/common-media-library/cmcd/CmcdStreamingFormat';
+import { appendCmcdHeaders } from '@svta.org/common-media-library/cmcd/appendCmcdHeaders';
+import { appendCmcdQuery } from '@svta.org/common-media-library/cmcd/appendCmcdQuery';
+import { uuid } from '@svta.org/common-media-library/utils/uuid';
 import type {
   FragmentLoaderConstructor,
   HlsConfig,
@@ -54,7 +53,7 @@ export default class CMCDController implements ComponentAPI {
       config.pLoader = this.createPlaylistLoader();
       config.fLoader = this.createFragmentLoader();
 
-      this.sid = cmcd.sessionId || CMCDController.uuid();
+      this.sid = cmcd.sessionId || uuid();
       this.cid = cmcd.contentId;
       this.useHeaders = cmcd.useHeaders === true;
       this.registerListeners();
@@ -382,17 +381,5 @@ export default class CMCDController implements ComponentAPI {
         this.loader.load(context, config, callbacks);
       }
     };
-  }
-
-  /**
-   * Generate a random v4 UUI
-   *
-   * @returns {string}
-   */
-  static uuid(): string {
-    const url = URL.createObjectURL(new Blob());
-    const uuid = url.toString();
-    URL.revokeObjectURL(url);
-    return uuid.slice(uuid.lastIndexOf('/') + 1);
   }
 }
